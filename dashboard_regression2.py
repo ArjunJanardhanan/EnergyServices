@@ -176,5 +176,5 @@ def update_graph2(selected_features,selected_feature):
 
 
 if __name__ == '__main__':
-    app.run_server()
+    app.run_server(debug=False)
 
