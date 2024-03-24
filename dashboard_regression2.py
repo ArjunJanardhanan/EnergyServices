@@ -10,6 +10,10 @@ import pickle
 from sklearn import  metrics
 import numpy as np
 
+from sklearn.feature_selection import SelectKBest, mutual_info_regression, RFE
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import LinearRegression
+
 #Define CSS style
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -20,12 +24,33 @@ df = pd.read_csv('IST_Central_2019_test.csv')
 df2=df.iloc[:,2:7]
 X2=df2.values
 # fig1 = px.line(df, x="date", y=df.columns[1:4])# Creates a figure with the raw data
+df1=df.iloc[:,2:]
+X1=df1.values
 
 feature = df.columns[1:]
-
+feat=df1.columns
 
 #df_real = pd.read_csv('real_results.csv')
 y2=df['Power[kW]'].values
+
+# Define feature selection methods
+def filter_method(X1, y2):
+    features = SelectKBest(k=5, score_func=mutual_info_regression)
+    fit = features.fit(X1, y2)
+    return fit.scores_
+
+def wrapper_method(X1, y2):
+    model = LinearRegression() 
+    rfe = RFE(model,n_features_to_select=3)
+    fit = rfe.fit(X1, y2)
+    return fit.ranking_
+
+def ensemble_method(X1, y2):
+    model = RandomForestRegressor()
+    model.fit(X1, y2)
+    return model.feature_importances_
+
+
 
 
 
@@ -178,7 +203,8 @@ app.layout = html.Div([
         dcc.Tab(label='Raw Data', value='tab-1'),
         dcc.Tab(label='Forecast', value='tab-2'),
         dcc.Tab(label='Error Metrics', value='tab-3'),
-        dcc.Tab(label='Exploratory Data Analysis', value='tab-4')
+        dcc.Tab(label='Exploratory Data Analysis', value='tab-4'),
+        dcc.Tab(label='Feature Selection', value='tab-5')
     ]),
     html.Div(id='tabs-content'),
 ])
@@ -247,6 +273,21 @@ def render_content(tab):
                          value='histogram'), 
             dcc.Graph(id='plot')
         ])
+    elif tab == 'tab-5':
+        return html.Div([
+            html.H4('Visualizing the significance of features in modeling',style={'text-align': 'center'}),
+            html.Label('Select the feature selection method:'),           
+            dcc.Dropdown(
+                id='feature-method-dropdown',
+                options=[
+                    {'label': 'Filter Method (KBest)', 'value': 'filter'},
+                    {'label': 'Wrapper Method (RFE)', 'value': 'wrapper'},
+                    {'label': 'Ensemble Method', 'value': 'ensemble'}
+                ],
+                value='filter',
+            ),
+            html.Div(id='feature-selection-results')
+        ])
 
 @app.callback(
     Output('yearly-data', 'figure'),
@@ -259,7 +300,7 @@ def update_graph1(selected_features):
         trace = go.Scatter(x=df["date"], y=df[feature], mode='lines', name=feature)
         traces.append(trace)
     # Create the figure object
-    fig = {'data': traces, 'layout': {'title': 'Selected Features'}}
+    fig = {'data': traces, 'layout': {'title': 'Selected plots'}}
     return fig
 
 @app.callback(
@@ -277,7 +318,7 @@ def update_graph2(selected_features,selected_feature):
         trace = go.Scatter(x=df["date"], y=df[feature], mode='lines', name=feature)
         traces.append(trace)   
     # Create the figure object
-    fig = {'data': traces, 'layout': {'title': 'Selected Features'}}
+    fig = {'data': traces, 'layout': {'title': 'Selected plots'}}
     return fig
 
 # Callback to update histogram and boxplot based on selected feature
@@ -296,6 +337,36 @@ def update_plots(selected_feature, plot_type):
         fig3 = px.box(df, y=selected_feature, title=f'Boxplot for {selected_feature}')
     return fig3
 
+@app.callback(
+    Output('feature-selection-results', 'children'),
+    Input('feature-method-dropdown', 'value')
+)
+def perform_feature_selection(method):
+    if method == 'filter':
+        scores = filter_method(X1, y2)
+        return html.Div([
+            dcc.Graph(figure={
+                'data': [go.Bar(x=feat, y=scores)],
+                'layout': {'title': 'Feature Importance Scores for Filter Method'}
+            })
+        ])
+    elif method == 'wrapper':
+        rankings = wrapper_method(X1, y2)
+        return html.Div([
+            dcc.Graph(figure={
+                'data': [go.Bar(x=feat, y=rankings)],
+                'layout': {'title': 'Feature Rankings for Wrapper Method'}
+            })
+        ])
+       
+    elif method == 'ensemble':
+        importances = ensemble_method(X1, y2)
+        return html.Div([
+            dcc.Graph(figure={
+                'data': [go.Bar(x=feat, y=importances)],
+                'layout': {'title': 'Feature Importances for Ensemble Method'}
+            })
+        ])
 
 if __name__ == '__main__':
     app.run_server(debug=False)
