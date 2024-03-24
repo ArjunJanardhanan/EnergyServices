@@ -3,7 +3,6 @@ blinker==1.7.0
 dash
 pandas
 plotly
-pickle
 sklearn
 numpy
 dash-core-components==2.0.0
