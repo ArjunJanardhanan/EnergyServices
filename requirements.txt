@@ -5,7 +5,6 @@ dash-html-components==2.0.0
 dash-table==5.0.0
 fonttools==4.25.0
 inflection==0.5.1
-mkl-service==2.4.0
 munkres==1.1.4
 patsy==0.5.3
 ply==3.11
