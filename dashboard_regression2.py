@@ -83,6 +83,7 @@ def generate_table(dataframe, max_rows=10):
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
+server=app.server
 app.layout = html.Div([
     html.H1('Energy Forecast Tool', style={'text-align': 'center'}),
     html.P('Visualizing real data and forecasting electricity consumption in the central building of IST from January to March 2019 with error metrics', style={'text-align': 'center'}),
